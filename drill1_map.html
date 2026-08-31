@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Depth 4 — Drill 1</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg: #14181a;
+    --bg-panel: #1b2123;
+    --bg-panel-2: #131718;
+    --line: #3a4245;
+    --line-soft: #262d2f;
+    --rust: #b5622d;
+    --rust-glow: rgba(181,98,45,0.5);
+    --amber: #e8a33d;
+    --amber-glow: rgba(232,163,61,0.55);
+    --teal: #4fb3ac;
+    --teal-glow: rgba(79,179,172,0.45);
+    --violet: #8b7fd6;
+    --violet-glow: rgba(139,127,214,0.45);
+    --text: #e9e4da;
+    --text-dim: #8b9296;
+    --text-faint: #565e61;
+    --radius: 2px;
+    --display: 'Barlow Condensed', sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{ background: var(--bg); color: var(--text); font-family: var(--mono); min-height: 100vh; }
+
+  .app{ display:grid; grid-template-columns: 300px 1fr; min-height:100vh; }
+  @media (max-width: 860px){ .app{ grid-template-columns: 1fr; } }
+
+  .sidebar{ background: var(--bg-panel); border-right: 1px solid var(--line-soft); padding: 22px 20px; display:flex; flex-direction:column; gap:22px; overflow-y:auto; }
+
+  .depth-tag{ font-family: var(--mono); font-size: 11px; letter-spacing:1.5px; color: var(--text-dim); }
+  .depth-tag b{ color: var(--rust); }
+  h1{ font-family: var(--display); font-weight:700; font-size:30px; letter-spacing: 0.5px; margin: 2px 0 0 0; line-height:1.05; color: var(--text); }
+  .subtitle{ font-family: var(--mono); font-size:11.5px; color: var(--text-dim); margin-top:6px; line-height:1.6; }
+
+  .block{ border-top: 1px solid var(--line-soft); padding-top: 16px; }
+  .block-label{ font-family: var(--display); font-weight:600; font-size: 14px; letter-spacing: 0.3px; color: var(--text); margin: 0 0 10px 0; }
+
+  .seed-row{ display:flex; gap:8px; align-items:center; }
+  .seed-input{ flex:1; background: var(--bg-panel-2); color: var(--text); border: 1px solid var(--line); border-radius: var(--radius); font-family: var(--mono); font-size: 12px; padding: 7px 8px; }
+  .reroll-btn{ font-family: var(--mono); font-size: 11px; background: var(--bg-panel-2); color: var(--text); border: 1px solid var(--violet); border-radius: var(--radius); padding: 7px 10px; cursor:pointer; }
+  .reroll-btn:hover{ box-shadow: 0 0 8px var(--violet-glow); }
+  .sim-warning{ margin-top:8px; font-size: 10px; color: var(--violet); line-height:1.6; border: 1px dashed var(--violet); border-radius: var(--radius); padding: 7px 8px; }
+
+  .z-readout{ display:flex; justify-content:space-between; font-size:11px; color: var(--text-dim); margin-bottom:6px; }
+  .z-readout b{ color: var(--amber); font-size:14px; font-family: var(--display); }
+  input[type=range]{ width:100%; accent-color: var(--amber); }
+  .z-hint{ font-size: 10px; color: var(--text-faint); margin-top:6px; line-height:1.5; }
+
+  .marker-list{ display:flex; flex-direction:column; gap:2px; }
+  .marker-row{ display:flex; align-items:center; gap:8px; padding: 7px 8px; border-radius: var(--radius); cursor:pointer; font-size:11.5px; border: 1px solid transparent; }
+  .marker-row:hover{ background: var(--bg-panel-2); }
+  .marker-row.selected{ border-color: var(--amber); background: var(--bg-panel-2); }
+  .marker-row.dimmed{ opacity: 0.35; }
+  .dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .dot.elevator{ background: var(--rust); box-shadow: 0 0 5px var(--rust-glow); }
+  .dot.fixed{ background: var(--teal); box-shadow: 0 0 5px var(--teal-glow); }
+  .dot.random{ background: var(--violet); box-shadow: 0 0 5px var(--violet-glow); }
+  .marker-name{ flex:1; color: var(--text); }
+  .marker-z{ color: var(--text-faint); font-size: 10px; }
+
+  .legend{ display:flex; flex-direction:column; gap:8px; font-size:11px; color: var(--text-dim); }
+  .legend-row{ display:flex; align-items:center; gap:8px; }
+  .legend-swatch{ width:14px; height:14px; border-radius:2px; flex-shrink:0; }
+
+  .note{ font-size: 10.5px; color: var(--text-faint); line-height:1.6; }
+  .note b{ color: var(--text-dim); }
+  .absent-tag{ display:inline-block; font-family: var(--mono); font-size: 10px; letter-spacing:0.5px; color: var(--text-faint); border: 1px dashed var(--line); border-radius: var(--radius); padding: 2px 6px; margin-top: 6px; }
+
+  .map-area{ position:relative; overflow:hidden; background: var(--bg); }
+  .map-toolbar{ position:absolute; top:16px; left:16px; z-index:5; display:flex; gap:8px; }
+  .tool-btn{ font-family: var(--mono); font-size: 11px; background: rgba(27,33,35,0.9); color: var(--text-dim); border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 10px; cursor:pointer; backdrop-filter: blur(2px); }
+  .tool-btn:hover{ color: var(--text); border-color: var(--amber); }
+  .seed-tag{ position:absolute; top:16px; right:16px; z-index:5; font-family: var(--mono); font-size: 11px; background: rgba(27,33,35,0.9); color: var(--violet); border: 1px solid var(--violet); border-radius: var(--radius); padding: 7px 10px; }
+
+  svg{ display:block; width:100%; height:100%; cursor: grab; }
+  svg.panning{ cursor: grabbing; }
+
+  .grid-line{ stroke: var(--line-soft); stroke-width: 1; }
+  .grid-label{ font-family: var(--mono); font-size: 9px; fill: var(--text-faint); }
+
+  .tile-fill.elevator{ fill: rgba(181,98,45,0.12); stroke: var(--rust); stroke-width: 1.2; }
+  .tile-fill.cave{ fill: rgba(139,127,214,0.10); stroke: var(--violet); stroke-width: 1.2; }
+  .tile-label{ font-family: var(--display); font-weight:600; font-size: 12px; fill: var(--text); }
+  .tile-sub{ font-family: var(--mono); font-size: 9px; fill: var(--text-faint); }
+  .struct{ transition: opacity .15s; }
+
+  .callout{ position:absolute; bottom:16px; left:16px; right:16px; z-index:5; background: rgba(27,33,35,0.94); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; max-width: 380px; display:none; }
+  .callout.visible{ display:block; }
+  .callout-title{ font-family: var(--display); font-weight:600; font-size:17px; color: var(--text); }
+  .callout-meta{ font-size: 10.5px; color: var(--text-dim); margin-top:4px; }
+  .callout-coords{ font-size: 10px; color: var(--text-faint); margin-top:6px; }
+</style>
+</head>
+<body data-depth="4">
+<div id="depth-nav"></div>
+<div class="app">
+  <div class="sidebar">
+    <div>
+      <div class="depth-tag">DEPTH <b>4</b> / 8 — UNDERGROUND</div>
+      <h1>Drill 1</h1>
+      <div class="subtitle">First PROCEDURAL depth (<code>tunnels = true</code>). No single "the" layout — content is seed-randomized. This POC renders what's structurally fixed exactly, and approximates only the parts we understand well enough to.</div>
+    </div>
+
+    <div class="block">
+      <p class="block-label">Illustrative seed</p>
+      <div class="seed-row">
+        <input type="text" id="seedInput" class="seed-input" value="1">
+        <button class="reroll-btn" id="rerollBtn">Reroll</button>
+      </div>
+      <div class="sim-warning">This drives a simple JS PRNG (mulberry32), NOT the real game's Lua math.random. It will NOT reproduce any actual save, even with a matching seed number — it exists only to explore what kinds of variation the placement rules allow.</div>
+    </div>
+
+    <div class="block">
+      <p class="block-label">Depth slice (Z)</p>
+      <div class="z-readout"><span>Z (CHUNKS) 0 – 8</span><b id="zVal">4</b></div>
+      <input type="range" id="zSlider" min="0" max="8" step="1" value="4">
+      <div class="z-hint">Cave stacks span 0-8 chunks locally; the elevator sits at z=2 in the same depth-local frame. Same target+band mechanism as the other depths.</div>
+
+      <div class="z-readout" style="margin-top:14px;"><span>Z BAND (±)</span><b id="bandVal">2</b></div>
+      <input type="range" id="bandSlider" min="0" max="8" step="1" value="2">
+    </div>
+
+    <div class="block">
+      <p class="block-label">Structures (this seed)</p>
+      <div class="marker-list" id="markerList"></div>
+    </div>
+
+    <div class="block">
+      <p class="block-label">Legend</p>
+      <div class="legend">
+        <div class="legend-row"><span class="legend-swatch" style="background:var(--rust);"></span> Elevator (fixed)</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:var(--violet);"></span> Cave tile (slot fixed, content seed-varies)</div>
+      </div>
+    </div>
+
+    <div class="block">
+      <p class="block-label">POC notes — fixed vs. approximated vs. descoped</p>
+      <div class="note">
+        <b>Fixed, no variation:</b> elevator at (-1,-1,2); the 3 cave "stack" slot positions/rotations — S(-1,-7,rot2), W(-5,-6,rot1), E(4,-6,rot3). All 3 possible slot configs sum to the same total height (8 chunks) — a real design constraint, not a coincidence.
+        <br><br>
+        <b>Approximated (labeled, not exact):</b> WHICH config lands in which slot. Inferred from a naming-pattern analogy elsewhere in the script (<code>shuffle(array, startIndex)</code> leaves items before <code>startIndex</code> untouched) that config[1] (the single "8" tile) is always fixed to slot S, while only the two 2-piece pairs shuffle between W/E. This is an inference, not confirmed. Per-tile micro x/y offsets are approximated the same way.
+        <br><br>
+        <b>Descoped, not modeled:</b> exact bedrock-bevel geometry (formula known, but depends on this depth's real xMin/xMax/yMin/yMax bounds — not available in any file reviewed); pockets, tunnel pockets, and real tunnel pathing — all defined in the ~1800-line section of terrain_underground.lua not yet read. Reading that section is the clear next step before this depth's map can include tunnels.<span class="absent-tag">next step, not silent gap</span>
+        <br><br>
+        No quest markers exist for this depth (confirmed empty), no power toggle (no rendersettings variant found). Grid is 1 line per cell, this depth's native position unit — same as Depth 2.
+      </div>
+    </div>
+  </div>
+
+  <div class="map-area">
+    <div class="map-toolbar">
+      <button class="tool-btn" id="resetViewBtn">Reset view</button>
+    </div>
+    <div class="seed-tag" id="seedTag">seed 1</div>
+    <svg id="svg" viewBox="0 0 1000 700"></svg>
+    <div class="callout" id="callout">
+      <div class="callout-title" id="calloutTitle"></div>
+      <div class="callout-meta" id="calloutMeta"></div>
+      <div class="callout-coords" id="calloutCoords"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// FIXED data — exactly as found in terrain_underground.lua for g_depth == 4.
+const FIXED = {
+  elevator: { name: "Elevator", pos: [-1, -1, 2], size: [12, 8, 8], rotation: 0 },
+  slots: [
+    { id: "S", x: -1, y: -7, rotation: 2, offsetAxis: "x", offsetVals: [0, 1] },
+    { id: "W", x: -5, y: -6, rotation: 1, offsetAxis: "y", offsetVals: [0, 3] },
+    { id: "E", x: 4, y: -6, rotation: 3, offsetAxis: "y", offsetVals: [0, 3] }
+  ]
+};
+// The 3 possible stack configs, by name, with chunk sizes (x,y,z) parsed from filenames.
+const CONFIGS = [
+  [{ name: "8", size: [8, 8, 8] }],                                   // config[1] — always slot S per our inference
+  [{ name: "Bot3", size: [8, 8, 3] }, { name: "Top5", size: [8, 8, 5] }], // config[2]
+  [{ name: "Bot4", size: [8, 8, 4] }, { name: "Top4", size: [8, 8, 4] }]  // config[3]
+];
+
+// ---- illustrative-only seeded PRNG (mulberry32) — NOT the real game's RNG ----
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function hashSeed(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) { h = (Math.imul(31, h) + str.charCodeAt(i)) | 0; }
+  return h >>> 0;
+}
+function seededShuffle(arr, rng) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function resolveForSeed(seedStr) {
+  const rng = mulberry32(hashSeed(seedStr));
+  // Our inference: config[1] fixed to S; configs[2]/[3] shuffle between W/E.
+  const shuffledPair = seededShuffle([CONFIGS[1], CONFIGS[2]], rng);
+  const slotConfig = { S: CONFIGS[0], W: shuffledPair[0], E: shuffledPair[1] };
+
+  const structures = [];
+  structures.push({ id: "elevator", name: "Elevator", kind: "elevator",
+    pos: FIXED.elevator.pos, size: FIXED.elevator.size, rotation: FIXED.elevator.rotation });
+
+  for (const slot of FIXED.slots) {
+    const config = slotConfig[slot.id];
+    const offsets = seededShuffle(slot.offsetVals, rng);
+    let z = 0;
+    config.forEach((tile, idx) => {
+      const off = offsets.length ? offsets[offsets.length - 1 - (idx % offsets.length)] : 0;
+      const pos = [slot.x, slot.y, z];
+      if (slot.offsetAxis === 'x') pos[0] += off; else pos[1] += off;
+      structures.push({
+        id: `${slot.id}-${tile.name}`, name: `${tile.name} (slot ${slot.id})`, kind: "cave",
+        pos, size: tile.size, rotation: slot.rotation, slot: slot.id
+      });
+      z += tile.size[2];
+    });
+  }
+  return structures;
+}
+
+let currentSeed = "1";
+let DATA_STRUCTURES = resolveForSeed(currentSeed);
+
+const ASSUMED_CHUNKS_PER_CELL = 4; // visual proportion only, same caveat as Depth 2
+
+function computeBounds() {
+  const xs = DATA_STRUCTURES.map(s => s.pos[0]);
+  const ys = DATA_STRUCTURES.map(s => s.pos[1]);
+  return {
+    minX: Math.min(...xs) - 4, maxX: Math.max(...xs) + 4,
+    minY: Math.min(...ys) - 4, maxY: Math.max(...ys) + 4
+  };
+}
+let bounds = computeBounds();
+
+const VB_W = 1000, VB_H = 700;
+let UNIFORM_SCALE, offsetX, offsetY;
+function recomputeScale() {
+  const worldSpanX = bounds.maxX - bounds.minX;
+  const worldSpanY = bounds.maxY - bounds.minY;
+  UNIFORM_SCALE = Math.min(VB_W / worldSpanX, VB_H / worldSpanY);
+  const drawnW = worldSpanX * UNIFORM_SCALE, drawnH = worldSpanY * UNIFORM_SCALE;
+  offsetX = (VB_W - drawnW) / 2;
+  offsetY = (VB_H - drawnH) / 2;
+}
+recomputeScale();
+
+function cellToSvg(cx, cy) {
+  const sx = offsetX + (cx - bounds.minX) * UNIFORM_SCALE;
+  const sy = VB_H - offsetY - (cy - bounds.minY) * UNIFORM_SCALE;
+  return [sx, sy];
+}
+
+const GRID_SPACING = 1;
+function gridLines() {
+  const parts = [];
+  const gxStart = Math.ceil(bounds.minX / GRID_SPACING) * GRID_SPACING;
+  const gyStart = Math.ceil(bounds.minY / GRID_SPACING) * GRID_SPACING;
+  for (let gx = gxStart; gx <= bounds.maxX; gx += GRID_SPACING) {
+    const [sx0, sy0] = cellToSvg(gx, bounds.minY);
+    const [sx1, sy1] = cellToSvg(gx, bounds.maxY);
+    parts.push(`<line class="grid-line" x1="${sx0}" y1="${sy0}" x2="${sx1}" y2="${sy1}"/>`);
+    if (Math.round(gx) % 5 === 0) parts.push(`<text class="grid-label" x="${sx0 + 3}" y="14">${Math.round(gx)}</text>`);
+  }
+  for (let gy = gyStart; gy <= bounds.maxY; gy += GRID_SPACING) {
+    const [sx0, sy0] = cellToSvg(bounds.minX, gy);
+    const [sx1, sy1] = cellToSvg(bounds.maxX, gy);
+    parts.push(`<line class="grid-line" x1="${sx0}" y1="${sy0}" x2="${sx1}" y2="${sy1}"/>`);
+    if (Math.round(gy) % 5 === 0) parts.push(`<text class="grid-label" x="3" y="${sy0 - 3}">${Math.round(gy)}</text>`);
+  }
+  return parts.join('');
+}
+
+const svg = document.getElementById('svg');
+const markerListEl = document.getElementById('markerList');
+const zSlider = document.getElementById('zSlider');
+const zVal = document.getElementById('zVal');
+const bandSlider = document.getElementById('bandSlider');
+const bandVal = document.getElementById('bandVal');
+const callout = document.getElementById('callout');
+const seedInput = document.getElementById('seedInput');
+const seedTag = document.getElementById('seedTag');
+let Z_BAND = parseFloat(bandSlider.value);
+
+let selectedId = null;
+let view = { x: 0, y: 0, scale: 1 };
+
+function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function render() {
+  const parts = [];
+  parts.push(`<g id="viewport" transform="translate(${view.x},${view.y}) scale(${view.scale})">`);
+  parts.push(gridLines());
+
+  const zTarget = parseFloat(zSlider.value);
+  for (const s of DATA_STRUCTURES) {
+    const cellW = s.size[0] / ASSUMED_CHUNKS_PER_CELL;
+    const cellH = s.size[1] / ASSUMED_CHUNKS_PER_CELL;
+    const [cx, cy] = cellToSvg(s.pos[0], s.pos[1]);
+    const w = cellW * UNIFORM_SCALE, h = cellH * UNIFORM_SCALE;
+    const dz = Math.abs(s.pos[2] - zTarget);
+    const inRange = dz <= Z_BAND;
+    const opacity = inRange ? 1 : 0.3;
+    parts.push(`<g class="struct" data-id="${s.id}" style="cursor:pointer; opacity:${opacity};">
+      <rect class="tile-fill ${s.kind}" x="${cx - w/2}" y="${cy - h/2}" width="${w}" height="${h}" rx="3"/>
+      <text class="tile-label" x="${cx}" y="${cy - 3}" text-anchor="middle">${escapeHtml(s.name)}</text>
+      <text class="tile-sub" x="${cx}" y="${cy + 11}" text-anchor="middle">z${s.pos[2]} · ${s.size[0]}×${s.size[1]}×${s.size[2]}</text>
+    </g>`);
+  }
+
+  parts.push('</g>');
+  svg.innerHTML = parts.join('');
+  attachHandlers();
+}
+
+function attachHandlers() {
+  svg.querySelectorAll('.struct').forEach(g => {
+    g.addEventListener('click', (e) => { e.stopPropagation(); select(g.getAttribute('data-id')); });
+  });
+}
+
+function renderList() {
+  const zTarget = parseFloat(zSlider.value);
+  markerListEl.innerHTML = DATA_STRUCTURES.map(s => {
+    const dz = Math.abs(s.pos[2] - zTarget);
+    const inRange = dz <= Z_BAND;
+    const dotClass = s.kind === 'elevator' ? 'elevator' : 'random';
+    return `<div class="marker-row ${s.id === selectedId ? 'selected' : ''} ${inRange ? '' : 'dimmed'}" data-id="${s.id}">
+      <span class="dot ${dotClass}"></span>
+      <span class="marker-name">${escapeHtml(s.name)}</span>
+      <span class="marker-z">z${s.pos[2]}</span>
+    </div>`;
+  }).join('');
+  markerListEl.querySelectorAll('.marker-row').forEach(row => {
+    row.addEventListener('click', () => select(row.getAttribute('data-id')));
+  });
+}
+
+function select(id) {
+  selectedId = id;
+  const s = DATA_STRUCTURES.find(x => x.id === id);
+  if (s) {
+    document.getElementById('calloutTitle').textContent = s.name;
+    document.getElementById('calloutMeta').textContent = (s.kind === 'elevator' ? 'Elevator (fixed)' : 'Cave tile (slot fixed, content seed-varied)') + ' · rotation ' + s.rotation;
+    document.getElementById('calloutCoords').textContent =
+      `x ${s.pos[0]} cell  y ${s.pos[1]} cell  z ${s.pos[2]} chunk   ·   size ${s.size[0]}×${s.size[1]}×${s.size[2]} chunks`;
+    callout.classList.add('visible');
+  }
+  render();
+  renderList();
+}
+
+svg.addEventListener('click', () => { callout.classList.remove('visible'); selectedId = null; render(); renderList(); });
+
+zSlider.addEventListener('input', () => { zVal.textContent = zSlider.value; render(); renderList(); });
+bandSlider.addEventListener('input', () => { Z_BAND = parseFloat(bandSlider.value); bandVal.textContent = Z_BAND; render(); renderList(); });
+
+function applySeed() {
+  currentSeed = seedInput.value || "1";
+  seedTag.textContent = "seed " + currentSeed;
+  DATA_STRUCTURES = resolveForSeed(currentSeed);
+  bounds = computeBounds();
+  recomputeScale();
+  selectedId = null;
+  callout.classList.remove('visible');
+  render();
+  renderList();
+}
+document.getElementById('rerollBtn').addEventListener('click', () => {
+  seedInput.value = String(Math.floor(Math.random() * 1000000));
+  applySeed();
+});
+seedInput.addEventListener('change', applySeed);
+
+let isPanning = false, panStart = { x: 0, y: 0 }, viewStart = { x: 0, y: 0 };
+svg.addEventListener('mousedown', (e) => {
+  isPanning = true; svg.classList.add('panning');
+  panStart = { x: e.clientX, y: e.clientY }; viewStart = { x: view.x, y: view.y };
+});
+window.addEventListener('mousemove', (e) => {
+  if (!isPanning) return;
+  const dx = e.clientX - panStart.x, dy = e.clientY - panStart.y;
+  const rect = svg.getBoundingClientRect();
+  const scaleFactor = VB_W / rect.width;
+  view.x = viewStart.x + dx * scaleFactor; view.y = viewStart.y + dy * scaleFactor;
+  render();
+});
+window.addEventListener('mouseup', () => { isPanning = false; svg.classList.remove('panning'); });
+
+svg.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const rect = svg.getBoundingClientRect();
+  const scaleFactor = VB_W / rect.width;
+  const mx = (e.clientX - rect.left) * scaleFactor, my = (e.clientY - rect.top) * scaleFactor;
+  const delta = e.deltaY > 0 ? 0.9 : 1.1;
+  const newScale = Math.min(6, Math.max(0.4, view.scale * delta));
+  view.x = mx - ((mx - view.x) / view.scale) * newScale;
+  view.y = my - ((my - view.y) / view.scale) * newScale;
+  view.scale = newScale;
+  render();
+}, { passive: false });
+
+document.getElementById('resetViewBtn').addEventListener('click', () => { view = { x: 0, y: 0, scale: 1 }; render(); });
+
+render();
+renderList();
+</script>
+<script src="shared-nav.js"></script>
+</body>
+</html>

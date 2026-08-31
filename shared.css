@@ -1,0 +1,104 @@
+/* shared.css — canonical design tokens + common component styles for all depth maps.
+   Depths 1-4 keep their own local copies of these rules too (built before this file existed;
+   not retroactively de-duplicated to avoid touching verified working files). Depths 5-8
+   onward should rely on THIS file only, with no local duplication. */
+
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --bg: #14181a;
+  --bg-panel: #1b2123;
+  --bg-panel-2: #131718;
+  --line: #3a4245;
+  --line-soft: #262d2f;
+  --rust: #b5622d;
+  --rust-glow: rgba(181,98,45,0.5);
+  --amber: #e8a33d;
+  --amber-glow: rgba(232,163,61,0.55);
+  --teal: #4fb3ac;
+  --teal-glow: rgba(79,179,172,0.45);
+  --violet: #8b7fd6;
+  --violet-glow: rgba(139,127,214,0.45);
+  --text: #e9e4da;
+  --text-dim: #8b9296;
+  --text-faint: #565e61;
+  --radius: 2px;
+  --display: 'Barlow Condensed', sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+}
+
+*{ box-sizing: border-box; }
+html,body{ margin:0; padding:0; }
+body{ background: var(--bg); color: var(--text); font-family: var(--mono); min-height: 100vh; }
+
+.app{ display:grid; grid-template-columns: 300px 1fr; min-height:100vh; }
+@media (max-width: 860px){ .app{ grid-template-columns: 1fr; } }
+
+.sidebar{ background: var(--bg-panel); border-right: 1px solid var(--line-soft); padding: 22px 20px; display:flex; flex-direction:column; gap:22px; overflow-y:auto; }
+
+.depth-tag{ font-family: var(--mono); font-size: 11px; letter-spacing:1.5px; color: var(--text-dim); }
+.depth-tag b{ color: var(--rust); }
+h1{ font-family: var(--display); font-weight:700; font-size:30px; letter-spacing: 0.5px; margin: 2px 0 0 0; line-height:1.05; color: var(--text); }
+.subtitle{ font-family: var(--mono); font-size:11.5px; color: var(--text-dim); margin-top:6px; line-height:1.6; }
+
+.block{ border-top: 1px solid var(--line-soft); padding-top: 16px; }
+.block-label{ font-family: var(--display); font-weight:600; font-size: 14px; letter-spacing: 0.3px; color: var(--text); margin: 0 0 10px 0; }
+
+.z-readout{ display:flex; justify-content:space-between; font-size:11px; color: var(--text-dim); margin-bottom:6px; }
+.z-readout b{ color: var(--amber); font-size:14px; font-family: var(--display); }
+input[type=range]{ width:100%; accent-color: var(--amber); }
+.z-hint{ font-size: 10px; color: var(--text-faint); margin-top:6px; line-height:1.5; }
+
+.marker-list{ display:flex; flex-direction:column; gap:2px; }
+.marker-row{ display:flex; align-items:center; gap:8px; padding: 7px 8px; border-radius: var(--radius); cursor:pointer; font-size:11.5px; border: 1px solid transparent; }
+.marker-row:hover{ background: var(--bg-panel-2); }
+.marker-row.selected{ border-color: var(--amber); background: var(--bg-panel-2); }
+.marker-row.dimmed{ opacity: 0.35; }
+.dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.dot.elevator{ background: var(--rust); box-shadow: 0 0 5px var(--rust-glow); }
+.dot.fixed, .dot.location{ background: var(--rust); box-shadow: 0 0 5px var(--rust-glow); }
+.dot.quest, .dot.cave{ background: var(--teal); box-shadow: 0 0 5px var(--teal-glow); }
+.dot.zone{ background: var(--teal); box-shadow: 0 0 5px var(--teal-glow); }
+.dot.portal, .dot.random{ background: var(--violet); box-shadow: 0 0 5px var(--violet-glow); }
+.marker-name{ flex:1; color: var(--text); }
+.marker-z{ color: var(--text-faint); font-size: 10px; }
+
+.legend{ display:flex; flex-direction:column; gap:8px; font-size:11px; color: var(--text-dim); }
+.legend-row{ display:flex; align-items:center; gap:8px; }
+.legend-swatch{ width:14px; height:14px; border-radius:2px; flex-shrink:0; }
+
+.note{ font-size: 10.5px; color: var(--text-faint); line-height:1.6; }
+.note b{ color: var(--text-dim); }
+.absent-tag{ display:inline-block; font-family: var(--mono); font-size: 10px; letter-spacing:0.5px; color: var(--text-faint); border: 1px dashed var(--line); border-radius: var(--radius); padding: 2px 6px; margin-top: 6px; }
+
+.map-area{ position:relative; overflow:hidden; background: var(--bg); }
+.map-toolbar{ position:absolute; top:16px; left:16px; z-index:5; display:flex; gap:8px; }
+.tool-btn{ font-family: var(--mono); font-size: 11px; background: rgba(27,33,35,0.9); color: var(--text-dim); border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 10px; cursor:pointer; backdrop-filter: blur(2px); }
+.tool-btn:hover{ color: var(--text); border-color: var(--amber); }
+
+svg{ display:block; width:100%; height:100%; cursor: grab; }
+svg.panning{ cursor: grabbing; }
+
+.grid-line{ stroke: var(--line-soft); stroke-width: 1; }
+.grid-label{ font-family: var(--mono); font-size: 9px; fill: var(--text-faint); }
+
+.callout{ position:absolute; bottom:16px; left:16px; right:16px; z-index:5; background: rgba(27,33,35,0.94); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; max-width: 380px; display:none; }
+.callout.visible{ display:block; }
+.callout-title{ font-family: var(--display); font-weight:600; font-size:17px; color: var(--text); }
+.callout-meta{ font-size: 10.5px; color: var(--text-dim); margin-top:4px; }
+.callout-coords{ font-size: 10px; color: var(--text-faint); margin-top:6px; }
+
+/* ---- depth nav strip (injected by shared-nav.js) ---- */
+#depth-nav{
+  display:flex; gap:2px; overflow-x:auto;
+  background: var(--bg-panel-2); border-bottom: 1px solid var(--line-soft);
+  padding: 8px 12px;
+}
+.depth-nav-item{
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.3px;
+  color: var(--text-faint); text-decoration: none; white-space: nowrap;
+  padding: 6px 10px; border-radius: var(--radius); border: 1px solid transparent;
+}
+.depth-nav-item:hover{ color: var(--text); border-color: var(--line); }
+.depth-nav-item.active{ color: var(--amber); border-color: var(--amber); background: var(--bg-panel); }
+.depth-nav-item.planned{ color: var(--text-faint); opacity: 0.4; cursor: default; pointer-events: none; }

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Underground — Depth Index</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .hub{ max-width: 900px; margin: 0 auto; padding: 40px 24px 60px; }
+  .hub-header{ margin-bottom: 32px; }
+  .hub-header h1{ font-size: 34px; }
+  .hub-header .subtitle{ font-size: 12.5px; max-width: 560px; margin-top: 10px; }
+  .card-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+  .card{
+    display:block; text-decoration:none; border: 1px solid var(--line-soft); border-radius: var(--radius);
+    background: var(--bg-panel); padding: 16px; transition: border-color .15s, box-shadow .15s;
+  }
+  .card.built:hover{ border-color: var(--amber); box-shadow: 0 0 10px var(--amber-glow); }
+  .card.planned{ opacity: 0.45; cursor: default; }
+  .card-n{ font-family: var(--mono); font-size: 10.5px; color: var(--text-faint); letter-spacing: 1px; }
+  .card-name{ font-family: var(--display); font-weight:700; font-size: 20px; color: var(--text); margin-top: 4px; }
+  .card-status{ font-family: var(--mono); font-size: 10px; color: var(--teal); margin-top: 8px; }
+  .card.planned .card-status{ color: var(--text-faint); }
+  .hub-note{ margin-top: 36px; font-size: 10.5px; color: var(--text-faint); line-height: 1.7; max-width: 640px; }
+</style>
+</head>
+<body>
+<div class="hub">
+  <div class="hub-header">
+    <div class="depth-tag">SCRAP MECHANIC — UNDERGROUND</div>
+    <h1>Depth index</h1>
+    <div class="subtitle">Each depth is a fully independent map — its own file, own data, own rendering logic. Built ones link out below; the rest follow the same pattern once their placement data is worked through.</div>
+  </div>
+
+  <div class="card-grid" id="cardGrid"></div>
+
+  <div class="hub-note">
+    This index and the depth-switcher strip on each page are the only things shared across depths (along with base styling). Every depth's actual map data and behavior stays local to its own file, so a correction to one depth can't affect another.
+  </div>
+</div>
+
+<script src="shared-nav.js"></script>
+<script>
+  const grid = document.getElementById('cardGrid');
+  grid.innerHTML = NAV_DEPTHS.map(d => {
+    const tag = d.built ? 'a' : 'div';
+    const hrefAttr = d.built ? `href="${d.file}"` : '';
+    return `<${tag} class="card ${d.built ? 'built' : 'planned'}" ${hrefAttr}>
+      <div class="card-n">DEPTH ${d.n} / 8</div>
+      <div class="card-name">${d.name}</div>
+      <div class="card-status">${d.built ? 'Open map →' : 'Not yet built'}</div>
+    </${tag}>`;
+  }).join('');
+</script>
+</body>
+</html>

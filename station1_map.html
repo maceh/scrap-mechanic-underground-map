@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Depth 3 — Station 1</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg: #14181a;
+    --bg-panel: #1b2123;
+    --bg-panel-2: #131718;
+    --line: #3a4245;
+    --line-soft: #262d2f;
+    --rust: #b5622d;
+    --rust-glow: rgba(181,98,45,0.5);
+    --amber: #e8a33d;
+    --amber-glow: rgba(232,163,61,0.55);
+    --teal: #4fb3ac;
+    --teal-glow: rgba(79,179,172,0.45);
+    --text: #e9e4da;
+    --text-dim: #8b9296;
+    --text-faint: #565e61;
+    --radius: 2px;
+    --display: 'Barlow Condensed', sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{ background: var(--bg); color: var(--text); font-family: var(--mono); min-height: 100vh; }
+
+  .app{ display:grid; grid-template-columns: 300px 1fr; min-height:100vh; }
+  @media (max-width: 860px){ .app{ grid-template-columns: 1fr; } }
+
+  .sidebar{ background: var(--bg-panel); border-right: 1px solid var(--line-soft); padding: 22px 20px; display:flex; flex-direction:column; gap:22px; }
+
+  .depth-tag{ font-family: var(--mono); font-size: 11px; letter-spacing:1.5px; color: var(--text-dim); }
+  .depth-tag b{ color: var(--rust); }
+  h1{ font-family: var(--display); font-weight:700; font-size:30px; letter-spacing: 0.5px; margin: 2px 0 0 0; line-height:1.05; color: var(--text); }
+  .subtitle{ font-family: var(--mono); font-size:11.5px; color: var(--text-dim); margin-top:6px; line-height:1.6; }
+
+  .block{ border-top: 1px solid var(--line-soft); padding-top: 16px; }
+  .block-label{ font-family: var(--display); font-weight:600; font-size: 14px; letter-spacing: 0.3px; color: var(--text); margin: 0 0 10px 0; }
+
+  .z-readout{ display:flex; justify-content:space-between; font-size:11px; color: var(--text-dim); margin-bottom:6px; }
+  .z-readout b{ color: var(--amber); font-size:14px; font-family: var(--display); }
+  input[type=range]{ width:100%; accent-color: var(--amber); }
+  .z-hint{ font-size: 10px; color: var(--text-faint); margin-top:6px; line-height:1.5; }
+
+  .marker-list{ display:flex; flex-direction:column; gap:2px; }
+  .marker-row{ display:flex; align-items:center; gap:8px; padding: 7px 8px; border-radius: var(--radius); cursor:pointer; font-size:11.5px; border: 1px solid transparent; }
+  .marker-row:hover{ background: var(--bg-panel-2); }
+  .marker-row.selected{ border-color: var(--amber); background: var(--bg-panel-2); }
+  .marker-row.dimmed{ opacity: 0.35; }
+  .dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .dot.zone{ background: var(--teal); box-shadow: 0 0 5px var(--teal-glow); }
+  .dot.portal{ background: var(--amber); box-shadow: 0 0 5px var(--amber-glow); }
+  .marker-name{ flex:1; color: var(--text); }
+  .marker-z{ color: var(--text-faint); font-size: 10px; }
+
+  .legend{ display:flex; flex-direction:column; gap:8px; font-size:11px; color: var(--text-dim); }
+  .legend-row{ display:flex; align-items:center; gap:8px; }
+  .legend-swatch{ width:14px; height:14px; border-radius:2px; flex-shrink:0; }
+
+  .note{ font-size: 10.5px; color: var(--text-faint); line-height:1.6; }
+  .note b{ color: var(--text-dim); }
+  .absent-tag{ display:inline-block; font-family: var(--mono); font-size: 10px; letter-spacing:0.5px; color: var(--text-faint); border: 1px dashed var(--line); border-radius: var(--radius); padding: 2px 6px; margin-top: 6px; }
+
+  .map-area{ position:relative; overflow:hidden; background: var(--bg); }
+  .map-toolbar{ position:absolute; top:16px; left:16px; z-index:5; display:flex; gap:8px; }
+  .tool-btn{ font-family: var(--mono); font-size: 11px; background: rgba(27,33,35,0.9); color: var(--text-dim); border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 10px; cursor:pointer; backdrop-filter: blur(2px); }
+  .tool-btn:hover{ color: var(--text); border-color: var(--amber); }
+
+  svg{ display:block; width:100%; height:100%; cursor: grab; }
+  svg.panning{ cursor: grabbing; }
+
+  .zone-fill{ fill: rgba(79,179,172,0.06); stroke: var(--teal); stroke-width: 1; stroke-dasharray: 2 3; }
+  .grid-line{ stroke: var(--line-soft); stroke-width: 1; }
+  .grid-label{ font-family: var(--mono); font-size: 9px; fill: var(--text-faint); }
+  .zone-label{ font-family: var(--display); font-weight:600; font-size: 14px; fill: var(--teal); letter-spacing: 0.3px; }
+  .zone-sub{ font-family: var(--mono); font-size: 9.5px; fill: var(--text-faint); }
+  .portal-mark{ fill: var(--bg); stroke: var(--amber); stroke-width: 1.6; }
+  .portal-label{ font-family: var(--mono); font-size: 9.5px; fill: var(--text-dim); }
+  .zone-group, .portal-group{ transition: opacity .15s; }
+
+  .callout{ position:absolute; bottom:16px; left:16px; right:16px; z-index:5; background: rgba(27,33,35,0.94); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; max-width: 380px; display:none; }
+  .callout.visible{ display:block; }
+  .callout-title{ font-family: var(--display); font-weight:600; font-size:17px; color: var(--text); }
+  .callout-meta{ font-size: 10.5px; color: var(--text-dim); margin-top:4px; }
+  .callout-coords{ font-size: 10px; color: var(--text-faint); margin-top:6px; }
+</style>
+</head>
+<body data-depth="3">
+<div id="depth-nav"></div>
+<div class="app">
+  <div class="sidebar">
+    <div>
+      <div class="depth-tag">DEPTH <b>3</b> / 8 — UNDERGROUND</div>
+      <h1>Station 1</h1>
+      <div class="subtitle">Static hand-authored POI (single composing tile, <code>poi_undergroundstation01_1024</code>). No procedural generation — <code>UndergroundLevels[3]</code> has core/caves/pockets all nil, tunnels false.</div>
+    </div>
+
+    <div class="block">
+      <p class="block-label">Depth slice (Z)</p>
+      <div class="z-readout"><span>Z RANGE -8.5 – 261.5</span><b id="zVal">126</b></div>
+      <input type="range" id="zSlider" min="-8.5" max="261.5" step="1" value="126">
+      <div class="z-hint">Same mechanism as Depths 1 &amp; 2: distance-band filtering. Since zones/portals here are volumes rather than points, each one's Z-CENTER ((min+max)/2) is used as its filtering position.</div>
+
+      <div class="z-readout" style="margin-top:14px;"><span>Z BAND (±)</span><b id="bandVal">50</b></div>
+      <input type="range" id="bandSlider" min="0" max="140" step="5" value="50">
+      <div class="z-hint">Zones/portals whose Z-center is within this distance of the slice stay at full opacity.</div>
+    </div>
+
+    <div class="block">
+      <p class="block-label">Zones &amp; portals</p>
+      <div class="marker-list" id="markerList"></div>
+    </div>
+
+    <div class="block">
+      <p class="block-label">Legend</p>
+      <div class="legend">
+        <div class="legend-row"><span class="legend-swatch" style="border:1.5px dashed var(--teal); background:transparent;"></span> Zone (real world x/y/z volume)</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:transparent; border: 1.5px solid var(--amber); transform: rotate(45deg);"></span> Portal (zone transition)</div>
+      </div>
+    </div>
+
+    <div class="block">
+      <p class="block-label">POC notes</p>
+      <div class="note">
+        <b>Depth label fix:</b> the script's own comments disagree on whether index 3 or 4 is "Drill 1" vs "Station 1". Resolved using the tile file paths themselves (unambiguous: <code>UndergroundLevels[4]</code> references <code>.../Drill1/...</code> files) — Depth 3 = Station 1, Depth 4 = Drill 1. Doesn't change the data either way, since both slots have zero quest markers.
+        <br><br>
+        <b>Quest markers:</b> none.<span class="absent-tag">confirmed absent</span>
+        <br><br>
+        <b>Ambient/rendersettings labels:</b> none — this depth's <code>zoneSettings</code> field is an empty string, unlike Mining Hub which had a populated file.<span class="absent-tag">confirmed absent</span>
+        <br><br>
+        <b>Tile placement:</b> the single composing tile is stated as a fact (name + cell-grid size) but NOT drawn on the map. Unlike Mining Hub, there's no marker data here to check proximity against zones, so overlaying it would be pure guesswork with zero supporting evidence — different from Mining Hub's case, where a ~35-100 unit gap gave real justification.
+        <br><br>
+        <b>Z-filtering:</b> now uses the same target+band mechanism as Depths 1 &amp; 2 (previously used containment). Since zones/portals are volumes, each one's Z-center stands in for a point position — a small approximation, noted here rather than left silent.
+      </div>
+    </div>
+  </div>
+
+  <div class="map-area">
+    <div class="map-toolbar">
+      <button class="tool-btn" id="resetViewBtn">Reset view</button>
+    </div>
+    <svg id="svg" viewBox="0 0 1000 700"></svg>
+    <div class="callout" id="callout">
+      <div class="callout-title" id="calloutTitle"></div>
+      <div class="callout-meta" id="calloutMeta"></div>
+      <div class="callout-coords" id="calloutCoords"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Real coordinates as found in undergroundworld_station_01.world
+const DATA = {
+  zones: [
+    { id: 0, x: [-162.0, -25.25], y: [255.5, 437.25], z: [0.0, 175.0] },
+    { id: 1, x: [-186.25, 256.0], y: [-111.0, 230.75], z: [-8.5, 261.5] },
+    { id: 2, x: [-163.0, -25.0], y: [230.75, 255.5], z: [0.0, 183.0] }
+  ],
+  portals: [
+    { id: 4, x: [-133.466827393, -64.274841309], y: [255.5, 255.5], z: [64.462295532, 131.014770508], zoneA: 2, zoneB: 0 },
+    { id: 5, x: [-141.026290894, -116.461105347], y: [230.75, 230.75], z: [68.953979492, 94.968658447], zoneA: 1, zoneB: 2 }
+  ],
+  tile: { name: "poi_undergroundstation01_1024", cellBBox: { x: [-8, 7], y: [-8, 7] } }
+};
+
+const allX = DATA.zones.flatMap(z => z.x);
+const allY = DATA.zones.flatMap(z => z.y);
+const wPad = 40;
+const wMinX = Math.min(...allX) - wPad, wMaxX = Math.max(...allX) + wPad;
+const wMinY = Math.min(...allY) - wPad, wMaxY = Math.max(...allY) + wPad;
+
+const VB_W = 1000, VB_H = 700;
+const worldSpanX = wMaxX - wMinX;
+const worldSpanY = wMaxY - wMinY;
+const UNIFORM_SCALE = Math.min(VB_W / worldSpanX, VB_H / worldSpanY);
+const drawnW = worldSpanX * UNIFORM_SCALE;
+const drawnH = worldSpanY * UNIFORM_SCALE;
+const offsetX = (VB_W - drawnW) / 2;
+const offsetY = (VB_H - drawnH) / 2;
+
+function worldToSvg(x, y) {
+  const sx = offsetX + (x - wMinX) * UNIFORM_SCALE;
+  const sy = VB_H - offsetY - (y - wMinY) * UNIFORM_SCALE;
+  return [sx, sy];
+}
+
+// Background grid — 1 line per 50 world units, matching this depth's real-world zone/portal
+// coordinate scale (smaller span than Depth 1, so a finer spacing reads better here).
+const GRID_SPACING = 50;
+function gridLines() {
+  const parts = [];
+  const gxStart = Math.ceil(wMinX / GRID_SPACING) * GRID_SPACING;
+  const gyStart = Math.ceil(wMinY / GRID_SPACING) * GRID_SPACING;
+  for (let gx = gxStart; gx <= wMaxX; gx += GRID_SPACING) {
+    const [sx0, sy0] = worldToSvg(gx, wMinY);
+    const [sx1, sy1] = worldToSvg(gx, wMaxY);
+    parts.push(`<line class="grid-line" x1="${sx0}" y1="${sy0}" x2="${sx1}" y2="${sy1}"/>`);
+    parts.push(`<text class="grid-label" x="${sx0 + 3}" y="14">${gx}</text>`);
+  }
+  for (let gy = gyStart; gy <= wMaxY; gy += GRID_SPACING) {
+    const [sx0, sy0] = worldToSvg(wMinX, gy);
+    const [sx1, sy1] = worldToSvg(wMaxX, gy);
+    parts.push(`<line class="grid-line" x1="${sx0}" y1="${sy0}" x2="${sx1}" y2="${sy1}"/>`);
+    parts.push(`<text class="grid-label" x="3" y="${sy0 - 3}">${gy}</text>`);
+  }
+  return parts.join('');
+}
+
+const svg = document.getElementById('svg');
+const markerListEl = document.getElementById('markerList');
+const zSlider = document.getElementById('zSlider');
+const zVal = document.getElementById('zVal');
+const bandSlider = document.getElementById('bandSlider');
+const bandVal = document.getElementById('bandVal');
+const callout = document.getElementById('callout');
+let Z_BAND = parseFloat(bandSlider.value);
+
+let selectedId = null;
+let view = { x: 0, y: 0, scale: 1 };
+
+function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function zCenter(range) { return (range[0] + range[1]) / 2; }
+function inRangeZone(z) { const zt = parseFloat(zSlider.value); return Math.abs(zCenter(z.z) - zt) <= Z_BAND; }
+function inRangePortal(p) { const zt = parseFloat(zSlider.value); return Math.abs(zCenter(p.z) - zt) <= Z_BAND; }
+
+function render() {
+  const parts = [];
+  parts.push(`<g id="viewport" transform="translate(${view.x},${view.y}) scale(${view.scale})">`);
+  parts.push(gridLines());
+
+  for (const z of DATA.zones) {
+    const [sx0, sy0] = worldToSvg(z.x[0], z.y[0]);
+    const [sx1, sy1] = worldToSvg(z.x[1], z.y[1]);
+    const rx = Math.min(sx0, sx1), ry = Math.min(sy0, sy1);
+    const rw = Math.abs(sx1 - sx0), rh = Math.abs(sy1 - sy0);
+    const opacity = inRangeZone(z) ? 1 : 0.3;
+    parts.push(`<g class="zone-group" data-id="z${z.id}" style="opacity:${opacity}; cursor:pointer;">
+      <rect class="zone-fill" x="${rx}" y="${ry}" width="${rw}" height="${rh}"/>
+      <text class="zone-label" x="${rx + 10}" y="${ry + 22}">ZONE ${z.id}</text>
+      <text class="zone-sub" x="${rx + 10}" y="${ry + 37}">z ${z.z[0].toFixed(1)} – ${z.z[1].toFixed(1)}</text>
+    </g>`);
+  }
+
+  for (const p of DATA.portals) {
+    const mx = (p.x[0] + p.x[1]) / 2, my = (p.y[0] + p.y[1]) / 2;
+    const [sx, sy] = worldToSvg(mx, my);
+    const opacity = inRangePortal(p) ? 1 : 0.3;
+    parts.push(`<g class="portal-group" data-id="p${p.id}" style="opacity:${opacity}; cursor:pointer;">
+      <rect class="portal-mark" x="${sx - 6}" y="${sy - 6}" width="12" height="12" transform="rotate(45 ${sx} ${sy})"/>
+      <text class="portal-label" x="${sx + 10}" y="${sy + 4}">zone ${p.zoneA} ↔ ${p.zoneB}</text>
+    </g>`);
+  }
+
+  parts.push('</g>');
+  svg.innerHTML = parts.join('');
+  attachHandlers();
+}
+
+function attachHandlers() {
+  svg.querySelectorAll('.zone-group, .portal-group').forEach(g => {
+    g.addEventListener('click', (e) => { e.stopPropagation(); select(g.getAttribute('data-id')); });
+  });
+}
+
+function renderList() {
+  const items = [
+    ...DATA.zones.map(z => ({ id: 'z' + z.id, name: 'Zone ' + z.id, kind: 'zone', inRange: inRangeZone(z), z: z.z })),
+    ...DATA.portals.map(p => ({ id: 'p' + p.id, name: `Portal ${p.id} (zone ${p.zoneA}\u2194${p.zoneB})`, kind: 'portal', inRange: inRangePortal(p), z: p.z }))
+  ];
+  markerListEl.innerHTML = items.map(it => `
+    <div class="marker-row ${it.id === selectedId ? 'selected' : ''} ${it.inRange ? '' : 'dimmed'}" data-id="${it.id}">
+      <span class="dot ${it.kind}"></span>
+      <span class="marker-name">${escapeHtml(it.name)}</span>
+      <span class="marker-z">${it.z[0].toFixed(0)}–${it.z[1].toFixed(0)}</span>
+    </div>`).join('');
+  markerListEl.querySelectorAll('.marker-row').forEach(row => {
+    row.addEventListener('click', () => select(row.getAttribute('data-id')));
+  });
+}
+
+function select(id) {
+  selectedId = id;
+  let title = '', meta = '', coords = '';
+  if (id.startsWith('z')) {
+    const z = DATA.zones.find(x => 'z' + x.id === id);
+    title = 'Zone ' + z.id;
+    meta = 'Ambience/render volume';
+    coords = `x ${z.x[0].toFixed(1)}–${z.x[1].toFixed(1)}   y ${z.y[0].toFixed(1)}–${z.y[1].toFixed(1)}   z ${z.z[0].toFixed(1)}–${z.z[1].toFixed(1)}`;
+  } else {
+    const p = DATA.portals.find(x => 'p' + x.id === id);
+    title = 'Portal ' + p.id;
+    meta = `Connects zone ${p.zoneA} \u2194 zone ${p.zoneB}`;
+    coords = `x ${p.x[0].toFixed(1)}–${p.x[1].toFixed(1)}   y ${p.y[0].toFixed(1)}–${p.y[1].toFixed(1)}   z ${p.z[0].toFixed(1)}–${p.z[1].toFixed(1)}`;
+  }
+  document.getElementById('calloutTitle').textContent = title;
+  document.getElementById('calloutMeta').textContent = meta;
+  document.getElementById('calloutCoords').textContent = coords;
+  callout.classList.add('visible');
+  render();
+  renderList();
+}
+
+svg.addEventListener('click', () => { callout.classList.remove('visible'); selectedId = null; render(); renderList(); });
+
+zSlider.addEventListener('input', () => {
+  zVal.textContent = Math.round(parseFloat(zSlider.value));
+  render();
+  renderList();
+});
+
+bandSlider.addEventListener('input', () => {
+  Z_BAND = parseFloat(bandSlider.value);
+  bandVal.textContent = Z_BAND;
+  render();
+  renderList();
+});
+
+let isPanning = false, panStart = { x: 0, y: 0 }, viewStart = { x: 0, y: 0 };
+svg.addEventListener('mousedown', (e) => {
+  isPanning = true; svg.classList.add('panning');
+  panStart = { x: e.clientX, y: e.clientY }; viewStart = { x: view.x, y: view.y };
+});
+window.addEventListener('mousemove', (e) => {
+  if (!isPanning) return;
+  const dx = e.clientX - panStart.x, dy = e.clientY - panStart.y;
+  const rect = svg.getBoundingClientRect();
+  const scaleFactor = VB_W / rect.width;
+  view.x = viewStart.x + dx * scaleFactor; view.y = viewStart.y + dy * scaleFactor;
+  render();
+});
+window.addEventListener('mouseup', () => { isPanning = false; svg.classList.remove('panning'); });
+
+svg.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const rect = svg.getBoundingClientRect();
+  const scaleFactor = VB_W / rect.width;
+  const mx = (e.clientX - rect.left) * scaleFactor, my = (e.clientY - rect.top) * scaleFactor;
+  const delta = e.deltaY > 0 ? 0.9 : 1.1;
+  const newScale = Math.min(6, Math.max(0.4, view.scale * delta));
+  view.x = mx - ((mx - view.x) / view.scale) * newScale;
+  view.y = my - ((my - view.y) / view.scale) * newScale;
+  view.scale = newScale;
+  render();
+}, { passive: false });
+
+document.getElementById('resetViewBtn').addEventListener('click', () => { view = { x: 0, y: 0, scale: 1 }; render(); });
+
+render();
+renderList();
+</script>
+<script src="shared-nav.js"></script>
+</body>
+</html>
