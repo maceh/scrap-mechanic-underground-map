@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Depth 7 — Station 2</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .tile-fill{ fill: rgba(79,179,172,0.10); stroke: var(--teal); stroke-width: 1.2; }
+  .tile-label{ font-family: var(--display); font-weight:600; font-size: 16px; fill: var(--text); }
+  .tile-sub{ font-family: var(--mono); font-size: 10px; fill: var(--text-faint); }
+</style>
+</head>
+<body data-depth="7">
+<div id="depth-nav"></div>
+<div class="app">
+  <div class="sidebar">
+    <div>
+      <div class="depth-tag">DEPTH <b>7</b> / 8 — UNDERGROUND</div>
+      <h1>Station 2</h1>
+      <div class="subtitle">Static POI, single composing tile (<code>poi_undergroundstation02_1024</code>). No procedural generation — <code>UndergroundLevels[7]</code> has core/caves/pockets all nil, tunnels false.</div>
+    </div>
+
+    <div class="block">
+      <p class="block-label">POC notes</p>
+      <div class="note">
+        <b>Same minimal-data shape as Scrapyard (Depth 5).</b> Confirmed directly from the file: <code>zoneData</code> and <code>portalData</code> are both genuinely empty arrays — no zones, no portals.<span class="absent-tag">confirmed absent</span>
+        <br><br>
+        <b>Quest markers:</b> none.<span class="absent-tag">confirmed absent</span>
+        <br><br>
+        <b>Z data:</b> none exists anywhere in this file's <code>cellData</code> — no z field on any cell entry. No z-slider is shown here, since there's nothing to filter.<span class="absent-tag">confirmed absent</span>
+        <br><br>
+        <b>Difference from Scrapyard:</b> Scrapyard at least had an orphaned <code>.zonesettings</code> file uploaded (unlinked, but present). No <code>.zonesettings</code> file was uploaded for this depth at all — there's nothing to even flag as unlinked here.<span class="absent-tag">confirmed absent</span>
+        <br><br>
+        What's shown below is the tile's own footprint in its native cell grid — the only real spatial data this depth has.
+      </div>
+    </div>
+  </div>
+
+  <div class="map-area">
+    <div class="map-toolbar">
+      <button class="tool-btn" id="resetViewBtn">Reset view</button>
+    </div>
+    <svg id="svg" viewBox="0 0 1000 700"></svg>
+  </div>
+</div>
+
+<script>
+const TILE = { name: "poi_undergroundstation02_1024", cellBBox: { x: [-8, 7], y: [-8, 7] } };
+
+const wPad = 3;
+const wMinX = TILE.cellBBox.x[0] - wPad, wMaxX = TILE.cellBBox.x[1] + 1 + wPad;
+const wMinY = TILE.cellBBox.y[0] - wPad, wMaxY = TILE.cellBBox.y[1] + 1 + wPad;
+
+const VB_W = 1000, VB_H = 700;
+const worldSpanX = wMaxX - wMinX, worldSpanY = wMaxY - wMinY;
+const UNIFORM_SCALE = Math.min(VB_W / worldSpanX, VB_H / worldSpanY);
+const drawnW = worldSpanX * UNIFORM_SCALE, drawnH = worldSpanY * UNIFORM_SCALE;
+const offsetX = (VB_W - drawnW) / 2, offsetY = (VB_H - drawnH) / 2;
+
+function cellToSvg(cx, cy) {
+  const sx = offsetX + (cx - wMinX) * UNIFORM_SCALE;
+  const sy = VB_H - offsetY - (cy - wMinY) * UNIFORM_SCALE;
+  return [sx, sy];
+}
+
+const GRID_SPACING = 1;
+function gridLines() {
+  const parts = [];
+  for (let gx = Math.ceil(wMinX); gx <= wMaxX; gx += GRID_SPACING) {
+    const [sx0, sy0] = cellToSvg(gx, wMinY);
+    const [sx1, sy1] = cellToSvg(gx, wMaxY);
+    parts.push(`<line class="grid-line" x1="${sx0}" y1="${sy0}" x2="${sx1}" y2="${sy1}"/>`);
+    if (gx % 5 === 0) parts.push(`<text class="grid-label" x="${sx0 + 3}" y="14">${gx}</text>`);
+  }
+  for (let gy = Math.ceil(wMinY); gy <= wMaxY; gy += GRID_SPACING) {
+    const [sx0, sy0] = cellToSvg(wMinX, gy);
+    const [sx1, sy1] = cellToSvg(wMaxX, gy);
+    parts.push(`<line class="grid-line" x1="${sx0}" y1="${sy0}" x2="${sx1}" y2="${sy1}"/>`);
+    if (gy % 5 === 0) parts.push(`<text class="grid-label" x="3" y="${sy0 - 3}">${gy}</text>`);
+  }
+  return parts.join('');
+}
+
+const svg = document.getElementById('svg');
+let view = { x: 0, y: 0, scale: 1 };
+
+function render() {
+  const parts = [];
+  parts.push(`<g id="viewport" transform="translate(${view.x},${view.y}) scale(${view.scale})">`);
+  parts.push(gridLines());
+  const [x0, y0] = cellToSvg(TILE.cellBBox.x[0], TILE.cellBBox.y[0]);
+  const [x1, y1] = cellToSvg(TILE.cellBBox.x[1] + 1, TILE.cellBBox.y[1] + 1);
+  const rx = Math.min(x0, x1), ry = Math.min(y0, y1);
+  const rw = Math.abs(x1 - x0), rh = Math.abs(y1 - y0);
+  parts.push(`<rect class="tile-fill" x="${rx}" y="${ry}" width="${rw}" height="${rh}" rx="4"/>`);
+  parts.push(`<text class="tile-label" x="${rx + rw/2}" y="${ry + rh/2 - 6}" text-anchor="middle">Station 2</text>`);
+  parts.push(`<text class="tile-sub" x="${rx + rw/2}" y="${ry + rh/2 + 12}" text-anchor="middle">${TILE.name} · 16×16 cells</text>`);
+  parts.push('</g>');
+  svg.innerHTML = parts.join('');
+}
+
+let isPanning = false, panStart = { x: 0, y: 0 }, viewStart = { x: 0, y: 0 };
+svg.addEventListener('mousedown', (e) => {
+  isPanning = true; svg.classList.add('panning');
+  panStart = { x: e.clientX, y: e.clientY }; viewStart = { x: view.x, y: view.y };
+});
+window.addEventListener('mousemove', (e) => {
+  if (!isPanning) return;
+  const dx = e.clientX - panStart.x, dy = e.clientY - panStart.y;
+  const rect = svg.getBoundingClientRect();
+  const scaleFactor = VB_W / rect.width;
+  view.x = viewStart.x + dx * scaleFactor; view.y = viewStart.y + dy * scaleFactor;
+  render();
+});
+window.addEventListener('mouseup', () => { isPanning = false; svg.classList.remove('panning'); });
+
+svg.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const rect = svg.getBoundingClientRect();
+  const scaleFactor = VB_W / rect.width;
+  const mx = (e.clientX - rect.left) * scaleFactor, my = (e.clientY - rect.top) * scaleFactor;
+  const delta = e.deltaY > 0 ? 0.9 : 1.1;
+  const newScale = Math.min(6, Math.max(0.4, view.scale * delta));
+  view.x = mx - ((mx - view.x) / view.scale) * newScale;
+  view.y = my - ((my - view.y) / view.scale) * newScale;
+  view.scale = newScale;
+  render();
+}, { passive: false });
+
+document.getElementById('resetViewBtn').addEventListener('click', () => { view = { x: 0, y: 0, scale: 1 }; render(); });
+
+render();
+</script>
+<script src="shared-nav.js"></script>
+</body>
+</html>

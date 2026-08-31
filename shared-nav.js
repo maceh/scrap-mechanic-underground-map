@@ -7,10 +7,10 @@ const NAV_DEPTHS = [
   { n: 2, name: "Onboarding",       file: "onboarding_map.html", built: true },
   { n: 3, name: "Station 1",        file: "station1_map.html",   built: true },
   { n: 4, name: "Drill 1",          file: "drill1_map.html",     built: true },
-  { n: 5, name: "Scrapyard",        file: "scrapyard_map.html",  built: false },
-  { n: 6, name: "Drill 2",          file: "drill2_map.html",     built: false },
-  { n: 7, name: "Station 2",        file: "station2_map.html",   built: false },
-  { n: 8, name: "Final Boss Lobby", file: "bosslobby_map.html",  built: false }
+  { n: 5, name: "Scrapyard",        file: "scrapyard_map.html",  built: true },
+  { n: 6, name: "Drill 2",          file: "drill2_map.html",     built: true },
+  { n: 7, name: "Station 2",        file: "station2_map.html",   built: true },
+  { n: 8, name: "Final Boss Lobby", file: "bosslobby_map.html",  built: true }
 ];
 
 (function renderDepthNav() {
